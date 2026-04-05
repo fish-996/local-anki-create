@@ -29,12 +29,6 @@ export default function RootLayout({
 }: Readonly<{
     children: React.ReactNode;
 }>) {
-    if (!process.env.ANKI_ENDPOINT) {
-        return (
-            <div>Please configure Anki connect api endpoint in env vars</div>
-        );
-    }
-
     return (
         <html lang="en" className={roboto.variable}>
             <body>
