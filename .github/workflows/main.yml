@@ -49,14 +49,15 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-
+          
           $dist = Join-Path $PWD "dist"
           $app = Join-Path $dist "app"
           $nextDir = Join-Path $app ".next"
-
+          
+          Remove-Item $dist -Recurse -Force -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force -Path $app | Out-Null
           New-Item -ItemType Directory -Force -Path $nextDir | Out-Null
-
+          
           Copy-Item ".next/standalone/*" $app -Recurse -Force
           if (Test-Path "public") {
             Copy-Item "public" (Join-Path $app "public") -Recurse -Force
@@ -64,65 +65,47 @@ jobs:
           if (Test-Path ".next/static") {
             Copy-Item ".next/static" (Join-Path $nextDir "static") -Recurse -Force
           }
-
-          # Copy Node runtime
+          
           $nodeExe = (node -p "process.execPath").Trim()
           Copy-Item $nodeExe (Join-Path $app "node.exe") -Force
-
-          # Editable env file for maintainers
+          
           @"
           # ===== 应用配置（按需修改）=====
-          GOOGLE_API_KEY=sk-
-          GOOGLE_API_URL=https://api.ekan8.com/v1
-          LLM_MODEL=[Y]gemini-3-flash-preview
-          ANKI_ENDPOINT=http://localhost:8765
-
+          PORT=3000
+          HOSTNAME=127.0.0.1
+          
           # ===== 业务环境变量（示例）=====
           # NODE_ENV=production
           # NEXT_TELEMETRY_DISABLED=1
           # API_BASE_URL=https://example.com
           # CUSTOM_FLAG=true
           "@ | Out-File -FilePath (Join-Path $app ".env") -Encoding utf8
-
-          # User-facing launcher
+          
           @"
           @echo off
           setlocal EnableDelayedExpansion
           cd /d "%~dp0"
-
-          rem ===== 可在这里写死少量默认值（一般不改）=====
-          rem set PORT=3000
-          rem set HOSTNAME=127.0.0.1
-
-          rem ===== 从 .env 读取环境变量 =====
-          if exist ".env" (
-            for /f "usebackq tokens=* delims=" %%A in (".env") do (
-              set "line=%%A"
-          rem set HOSTNAME=127.0.0.1
-
-          rem ===== 从 .env 读取环境变量 =====
+          
           if exist ".env" (
             for /f "usebackq tokens=* delims=" %%A in (".env") do (
               set "line=%%A"
               if not "!line!"=="" if "!line:~0,1!" NEQ "#" set "!line!"
             )
           )
-
-          rem ===== 启动应用 =====
+          
           ".\node.exe" server.js
-
+          
           if errorlevel 1 (
             echo.
             echo 应用启动失败，请将此窗口截图给维护人员。
             pause
           )
           "@ | Out-File -FilePath (Join-Path $app "启动应用.bat") -Encoding ascii
-
-          # PowerShell launcher for admins
+          
           @'
           $ErrorActionPreference = "Stop"
           Set-Location $PSScriptRoot
-
+          
           if (Test-Path ".\.env") {
             Get-Content ".\.env" | ForEach-Object {
               $line = $_.Trim()
@@ -134,9 +117,14 @@ jobs:
               }
             }
           }
-
+          
           & ".\node.exe" "server.js"
           '@ | Out-File -FilePath (Join-Path $app "start.ps1") -Encoding utf8
+          
+          $zipPath = Join-Path $dist "${{ matrix.archive_name }}"
+          if (Test-Path $zipPath) {
+            Remove-Item $zipPath -Force
+          }
           
           Push-Location $app
           Compress-Archive -Path * -DestinationPath $zipPath -Force
