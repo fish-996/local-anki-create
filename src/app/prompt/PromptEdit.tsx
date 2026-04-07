@@ -4,7 +4,7 @@ import { getModelDetail, getModels } from '@/actions/models';
 import { useEffect, useEffectEvent, useState } from 'react';
 import { Autocomplete, Box, Button, Stack, TextField } from '@mui/material';
 
-const PromptEdit = (props: { modelList: string[]; endpoint: string }) => {
+const PromptEdit = (props: { modelList: string[];}) => {
     const { setFieldPrompt, getFieldPrompt } = usePromptContext();
 
     const [selectedModel, setSelectedModel] = useState<string | null>('');
@@ -17,7 +17,7 @@ const PromptEdit = (props: { modelList: string[]; endpoint: string }) => {
     >([]);
 
     async function initModelFields(modelName: string) {
-        const modelDetail = await getModelDetail(props.endpoint, modelName);
+        const modelDetail = await getModelDetail(modelName);
         if (modelDetail.success && modelDetail.data?.result) {
             return modelDetail.data.result.map((item) => ({
                 prompt: getFieldPrompt(modelName, item) ?? '',
@@ -36,7 +36,7 @@ const PromptEdit = (props: { modelList: string[]; endpoint: string }) => {
     useEffect(() => {
         if (!selectedModel) return;
         changeModelInitEvent(selectedModel ?? '');
-    }, [selectedModel, props.endpoint]);
+    }, [selectedModel]);
 
     function updateFormPrompt(key: string, prompt: string) {
         const newDetail = modelDetail.map((item) => {

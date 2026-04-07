@@ -5,10 +5,10 @@ export type AnkiConnectResult<T> = {
     error: string | null;
 };
 
-export async function getDeckList(endpoint: string) {
+export async function getDeckList() {
     'use server';
     try {
-        const body = await fetch(endpoint, {
+        const body = await fetch(process.env.ANKI_ENDPOINT!, {
             method: 'post',
             body: JSON.stringify({ action: 'deckNamesAndIds', version: 5 }),
         });

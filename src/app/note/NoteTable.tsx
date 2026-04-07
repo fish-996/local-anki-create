@@ -110,7 +110,6 @@ const NoteTable = (props: {
                 noteInfo={editModalState.noteInfo}
                 modelList={props.modelList}
                 deckName={props.deckName}
-                apiEndpoint={process.env.ANKI_ENDPOINT!}
                 onClose={() => closeEditModal()}
                 onSave={() => {
                     router.refresh();
@@ -120,7 +119,6 @@ const NoteTable = (props: {
                 visible={batchCreateModalState.visible}
                 modelList={props.modelList}
                 deckName={props.deckName}
-                apiEndpoint={process.env.ANKI_ENDPOINT!}
                 onClose={() => closeBatchCreateModal()}
                 onSave={() => {
                     router.refresh();

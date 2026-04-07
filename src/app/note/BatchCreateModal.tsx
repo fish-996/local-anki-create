@@ -47,7 +47,6 @@ type GenerationRequestResult = {
 };
 
 const BatchCreateModal = (props: {
-    apiEndpoint: string;
     onClose: () => void;
     onSave: () => void;
     visible: boolean;
@@ -73,14 +72,14 @@ const BatchCreateModal = (props: {
             return;
         }
         const getInfo = async () => {
-            const response = await getModelDetail(props.apiEndpoint, model);
+            const response = await getModelDetail(model);
             if (!response.success) {
                 return;
             }
             modelInfo.current = response.data?.result ?? [];
         };
         getInfo();
-    }, [model, props.apiEndpoint]);
+    }, [model]);
 
     const requestPool = useRef<RequestPool<GenerationRequestResult> | null>(
         null
@@ -97,7 +96,7 @@ const BatchCreateModal = (props: {
 
     async function refreshModelList() {
         try {
-            const response = await getModels(props.apiEndpoint);
+            const response = await getModels();
             if (!response.success) {
                 showError('Failed to refresh models');
                 return;
@@ -277,7 +276,6 @@ const BatchCreateModal = (props: {
             selectedWords.map(async (item) => {
                 const result = await requestPool.current?.run(async () => {
                     const queryResult = await findIfExistInDeck({
-                        endpoint: props.apiEndpoint,
                         deckName: props.deckName,
                         word: item.word,
                         searchField: modelWordField,
@@ -412,7 +410,7 @@ const BatchCreateModal = (props: {
             return;
         }
         try {
-            const response = await batchCreateNote(props.apiEndpoint, {
+            const response = await batchCreateNote({
                 deckName: props.deckName,
                 modelName: model,
                 notes: wordList.map((item) => ({

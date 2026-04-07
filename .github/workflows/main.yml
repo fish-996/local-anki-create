@@ -1,44 +1,223 @@
-name: Build and Push Next.js Docker Image
+name: Build Next.js Distributables With Node
 
-# 触发条件：当代码推送到 main 分支时执行
 on:
   push:
-    branches:
-      - master  # 如果你的主分支叫 master，请修改为 master
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
 
 jobs:
-  build-and-push:
-    runs-on: ubuntu-latest
+  build:
+    name: Build on ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: windows-x64
+            os: windows-latest
+            artifact_name: next-app-windows-x64
+            archive_name: next-app-windows-x64.zip
+          - name: macos
+            os: macos-latest
+            artifact_name: next-app-macos
+            archive_name: next-app-macos.tar.gz
 
     steps:
-      # 1. 拉取仓库代码
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      # 2. 设置 QEMU（用于支持多架构编译，兼容 ARM 架构的 NAS）
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      # 3. 设置 Docker Buildx（构建工具）
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      # 4. 登录 Docker Hub
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          version: 9
 
-      # 5. 构建并推送镜像
-      - name: Build and push
-        uses: docker/build-push-action@v5
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          # 编译成同时支持 amd64 和 arm64 的镜像
-          platforms: linux/amd64,linux/arm64
-          # 给镜像打标签，规则为：用户名/镜像名:latest。 
-          # 注意：请把 "my-nextjs-app" 替换为你想要的镜像名称（要求全小写）
-          tags: ${{ secrets.DOCKER_USERNAME }}/my-nextjs-app:latest
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Next.js
+        run: pnpm build
+
+      - name: Prepare distributable (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $dist = Join-Path $PWD "dist"
+          $app = Join-Path $dist "app"
+          $nextDir = Join-Path $app ".next"
+
+          New-Item -ItemType Directory -Force -Path $app | Out-Null
+          New-Item -ItemType Directory -Force -Path $nextDir | Out-Null
+
+          Copy-Item ".next/standalone/*" $app -Recurse -Force
+          if (Test-Path "public") {
+            Copy-Item "public" (Join-Path $app "public") -Recurse -Force
+          }
+          if (Test-Path ".next/static") {
+            Copy-Item ".next/static" (Join-Path $nextDir "static") -Recurse -Force
+          }
+
+          # Copy Node runtime
+          $nodeExe = (node -p "process.execPath").Trim()
+          Copy-Item $nodeExe (Join-Path $app "node.exe") -Force
+
+          # Editable env file for maintainers
+          @"
+          # ===== 应用配置（按需修改）=====
+          GOOGLE_API_KEY=sk-
+          GOOGLE_API_URL=https://api.ekan8.com/v1
+          LLM_MODEL=[Y]gemini-3-flash-preview
+          ANKI_ENDPOINT=http://localhost:8765
+
+          # ===== 业务环境变量（示例）=====
+          # NODE_ENV=production
+          # NEXT_TELEMETRY_DISABLED=1
+          # API_BASE_URL=https://example.com
+          # CUSTOM_FLAG=true
+          "@ | Out-File -FilePath (Join-Path $app "app.env") -Encoding utf8
+
+          # User-facing launcher
+          @"
+          @echo off
+          setlocal EnableDelayedExpansion
+          cd /d "%~dp0"
+
+          rem ===== 可在这里写死少量默认值（一般不改）=====
+          rem set PORT=3000
+          rem set HOSTNAME=127.0.0.1
+
+          rem ===== 从 app.env 读取环境变量 =====
+          if exist "app.env" (
+            for /f "usebackq tokens=* delims=" %%A in ("app.env") do (
+              set "line=%%A"
+          rem set HOSTNAME=127.0.0.1
+
+          rem ===== 从 app.env 读取环境变量 =====
+          if exist "app.env" (
+            for /f "usebackq tokens=* delims=" %%A in ("app.env") do (
+              set "line=%%A"
+              if not "!line!"=="" if "!line:~0,1!" NEQ "#" set "!line!"
+            )
+          )
+
+          rem ===== 启动应用 =====
+          ".\node.exe" server.js
+
+          if errorlevel 1 (
+            echo.
+            echo 应用启动失败，请将此窗口截图给维护人员。
+            pause
+          )
+          "@ | Out-File -FilePath (Join-Path $app "启动应用.bat") -Encoding ascii
+
+          # PowerShell launcher for admins
+          @'
+          $ErrorActionPreference = "Stop"
+          Set-Location $PSScriptRoot
+
+          if (Test-Path ".\app.env") {
+            Get-Content ".\app.env" | ForEach-Object {
+              $line = $_.Trim()
+              if ($line -and -not $line.StartsWith("#")) {
+                $parts = $line -split "=", 2
+                if ($parts.Count -eq 2) {
+                  [System.Environment]::SetEnvironmentVariable($parts[0], $parts[1], "Process")
+                }
+              }
+            }
+          }
+
+          & ".\node.exe" "server.js"
+          '@ | Out-File -FilePath (Join-Path $app "start.ps1") -Encoding utf8
+
+          Compress-Archive -Path "$app/*" -DestinationPath (Join-Path $dist "${{ matrix.archive_name }}") -Force
+
+      - name: Prepare distributable (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          DIST="$PWD/dist"
+          APP="$DIST/app"
+
+          mkdir -p "$APP/.next"
+          cp -R .next/standalone/* "$APP/"
+
+          if [ -d public ]; then
+            cp -R public "$APP/public"
+          fi
+
+          if [ -d .next/static ]; then
+            mkdir -p "$APP/.next"
+            cp -R .next/static "$APP/.next/static"
+          fi
+
+          # Copy Node runtime
+          NODE_PATH="$(node -p 'process.execPath')"
+          cp "$NODE_PATH" "$APP/node"
+          chmod +x "$APP/node"
+
+          # Editable env file for maintainers
+          cat > "$APP/app.env" <<'EOF'
+          # ===== 应用配置（按需修改）=====
+          GOOGLE_API_KEY=sk-
+          GOOGLE_API_URL=https://api.ekan8.com/v1
+          LLM_MODEL=[Y]gemini-3-flash-preview
+          ANKI_ENDPOINT=http://localhost:8765
+
+          # ===== 业务环境变量（示例）=====
+          # NODE_ENV=production
+          # NEXT_TELEMETRY_DISABLED=1
+          # API_BASE_URL=https://example.com
+          # CUSTOM_FLAG=true
+          EOF
+
+          # User-facing launcher
+          cat > "$APP/start.command" <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          cd "$(dirname "$0")"
+
+          # ===== 可在这里写死少量默认值（一般不改）=====
+          # export PORT=3000
+          # export HOSTNAME=127.0.0.1
+
+          # ===== 从 app.env 读取环境变量 =====
+          if [ -f "./app.env" ]; then
+            set -a
+            . "./app.env"
+            set +a
+          fi
+
+          exec "./node" "server.js"
+          EOF
+
+          chmod +x "$APP/start.command"
+
+          # Optional helper README
+          cat > "$APP/README.txt" <<'EOF'
+          使用方法：
+          1. 双击 start.command
+          2. 首次若被系统拦截，请右键打开，或在“系统设置 -> 隐私与安全性”中允许运行
+          3. 打开浏览器访问 http://127.0.0.1:3000
+
+          如需修改端口或其他配置，请编辑 app.env
+          EOF
+
+          tar -czf "$DIST/${{ matrix.archive_name }}" -C "$APP" .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: dist/${{ matrix.archive_name }}
+          if-no-files-found: error

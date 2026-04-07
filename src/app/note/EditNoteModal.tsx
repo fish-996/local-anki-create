@@ -49,7 +49,6 @@ export const NEW_NOTE_TAG = 'created_by_anki_note_editor';
 
 const EditNoteModal = (props: {
     noteInfo: NoteDetail | null;
-    apiEndpoint: string;
     onClose: () => void;
     onSave: () => void;
     visible: boolean;
@@ -96,7 +95,7 @@ const EditNoteModal = (props: {
             setFormFields([]);
             return;
         }
-        const fields = await getModelDetail(props.apiEndpoint, model);
+        const fields = await getModelDetail(model);
         if (!fields.success) {
             showError('Failed to get model detail');
             return;
@@ -204,7 +203,7 @@ const EditNoteModal = (props: {
 
     async function refreshModelList() {
         try {
-            const response = await getModels(props.apiEndpoint);
+            const response = await getModels();
             if (!response.success) {
                 showError('Failed to refresh models');
                 return;
@@ -419,7 +418,6 @@ const EditNoteModal = (props: {
             }
 
             const wordExisted = await findIfExistInDeck({
-                endpoint: props.apiEndpoint,
                 deckName: props.deckName,
                 searchField: wordField.key,
                 word: wordField.value,
@@ -430,7 +428,7 @@ const EditNoteModal = (props: {
                 return;
             }
 
-            const result = await createNote(props.apiEndpoint, {
+            const result = await createNote({
                 deckName: props.deckName,
                 fields: updateFields,
                 tags: [NEW_NOTE_TAG],
@@ -448,7 +446,6 @@ const EditNoteModal = (props: {
 
         try {
             const result = await updateNote(
-                props.apiEndpoint,
                 props.noteInfo.noteId,
                 updateFields
             );

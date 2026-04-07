@@ -21,20 +21,19 @@ const page = async (props: {
     let nodeQueryResult: Awaited<ReturnType<typeof getNoteList>> | null = null;
     if (deckName) {
         nodeQueryResult = await getNoteList(
-            process.env.ANKI_ENDPOINT!,
             deckName,
             pageNumber,
             pageSize
         );
     }
 
-    const deckQueryResult = await getDeckList(process.env.ANKI_ENDPOINT!);
+    const deckQueryResult = await getDeckList();
     const deckList = deckQueryResult?.data?.map((deck) => deck.name) ?? [];
 
     let modelList: string[];
     try {
         modelList =
-            (await getModels(process.env.ANKI_ENDPOINT!)).data?.result ?? [];
+            (await getModels()).data?.result ?? [];
     } catch (e) {
         modelList = [];
     }

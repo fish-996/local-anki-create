@@ -22,13 +22,12 @@ export type NoteDetail = {
 export type NoteDetailQueryResult = AnkiConnectResult<NoteDetail[]>;
 
 export async function getNoteList(
-    endpoint: string,
     deckName: string,
     pageNumber: number,
     pageSize: number
 ) {
     try {
-        const body = await fetch(endpoint, {
+        const body = await fetch(process.env.ANKI_ENDPOINT!, {
             method: 'post',
             body: JSON.stringify({
                 action: 'findNotes',
@@ -45,7 +44,7 @@ export async function getNoteList(
         const end = start + pageSize;
         const nodeRange = data.result.slice(start, end);
 
-        const detailBody = await fetch(endpoint, {
+        const detailBody = await fetch(process.env.ANKI_ENDPOINT!, {
             method: 'post',
             body: JSON.stringify({
                 action: 'notesInfo',
@@ -78,11 +77,10 @@ export async function getNoteList(
 }
 
 export async function updateNote(
-    endpoint: string,
     noteId: number,
     fields: Record<string, string>
 ) {
-    const body = await fetch(endpoint, {
+    const body = await fetch(process.env.ANKI_ENDPOINT!, {
         method: 'post',
         body: JSON.stringify({
             action: 'updateNoteFields',
@@ -101,7 +99,6 @@ export async function updateNote(
 }
 
 export async function createNote(
-    endpoint: string,
     args: {
         deckName: string;
         modelName: string;
@@ -114,7 +111,7 @@ export async function createNote(
         fields: Record<string, string>;
     }
 ) {
-    const body = await fetch(endpoint, {
+    const body = await fetch(process.env.ANKI_ENDPOINT!, {
         method: 'post',
         body: JSON.stringify({
             action: 'addNote',
@@ -136,7 +133,6 @@ export async function createNote(
 }
 
 export async function batchCreateNote(
-    endpoint: string,
     args: {
         deckName: string;
         modelName: string;
@@ -165,7 +161,7 @@ export async function batchCreateNote(
         },
     };
 
-    const body = await fetch(endpoint, {
+    const body = await fetch(process.env.ANKI_ENDPOINT!, {
         method: 'post',
         body: JSON.stringify(requestBody),
     });
@@ -175,19 +171,17 @@ export async function batchCreateNote(
 }
 
 export async function findIfExistInDeck({
-    endpoint,
     deckName,
     searchField,
     word,
 }: {
-    endpoint: string;
     deckName: string;
     searchField: string;
     word: string;
 }) {
     try {
         const query = `"deck:${deckName}" ${searchField}:${word}`;
-        const body = await fetch(endpoint, {
+        const body = await fetch(process.env.ANKI_ENDPOINT!, {
             method: 'post',
             body: JSON.stringify({
                 action: 'findNotes',

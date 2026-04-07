@@ -14,7 +14,7 @@ import { RefreshIcon } from '@/app/deck/components/RefreshIcon';
 import { DeckOperation } from '@/app/deck/components/DeckOperation';
 
 export const DeckTable = async () => {
-    const deckData = await getDeckList(process.env.ANKI_ENDPOINT!);
+    const deckData = await getDeckList();
     if (!deckData.success) {
         return (
             <div>

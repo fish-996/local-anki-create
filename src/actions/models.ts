@@ -2,9 +2,9 @@
 
 import { AnkiConnectResult } from '@/actions/deck';
 
-export async function getModels(endpoint: string) {
+export async function getModels() {
     try {
-        const body = await fetch(endpoint, {
+        const body = await fetch(process.env.ANKI_ENDPOINT!, {
             method: 'post',
             body: JSON.stringify({ action: 'modelNames', version: 5 }),
         });
@@ -24,9 +24,11 @@ export async function getModels(endpoint: string) {
     }
 }
 
-export async function getModelDetail(endpoint: string, modelName: string) {
+export async function getModelDetail(modelName: string) {
     try {
-        const body = await fetch(endpoint, {
+        console.log(process.env.ANKI_ENDPOINT!);
+
+        const body = await fetch(process.env.ANKI_ENDPOINT!, {
             method: 'post',
             body: JSON.stringify({
                 action: 'modelFieldNames',
