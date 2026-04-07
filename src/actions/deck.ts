@@ -1,3 +1,4 @@
+'use server';
 export type DeckQueryResult = AnkiConnectResult<Record<string, string>>;
 
 export type AnkiConnectResult<T> = {
@@ -6,11 +7,11 @@ export type AnkiConnectResult<T> = {
 };
 
 export async function getDeckList() {
-    'use server';
     try {
         const body = await fetch(process.env.ANKI_ENDPOINT!, {
             method: 'post',
             body: JSON.stringify({ action: 'deckNamesAndIds', version: 5 }),
+            cache: 'no-store',
         });
         const data = (await body.json()) as DeckQueryResult;
 

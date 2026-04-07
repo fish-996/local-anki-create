@@ -7,6 +7,7 @@ export async function getModels() {
         const body = await fetch(process.env.ANKI_ENDPOINT!, {
             method: 'post',
             body: JSON.stringify({ action: 'modelNames', version: 5 }),
+            cache: 'no-store',
         });
         const data = (await body.json()) as AnkiConnectResult<string[]>;
 

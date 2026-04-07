@@ -82,7 +82,7 @@ jobs:
           # NEXT_TELEMETRY_DISABLED=1
           # API_BASE_URL=https://example.com
           # CUSTOM_FLAG=true
-          "@ | Out-File -FilePath (Join-Path $app "app.env") -Encoding utf8
+          "@ | Out-File -FilePath (Join-Path $app ".env") -Encoding utf8
 
           # User-facing launcher
           @"
@@ -94,15 +94,15 @@ jobs:
           rem set PORT=3000
           rem set HOSTNAME=127.0.0.1
 
-          rem ===== 从 app.env 读取环境变量 =====
-          if exist "app.env" (
-            for /f "usebackq tokens=* delims=" %%A in ("app.env") do (
+          rem ===== 从 .env 读取环境变量 =====
+          if exist ".env" (
+            for /f "usebackq tokens=* delims=" %%A in (".env") do (
               set "line=%%A"
           rem set HOSTNAME=127.0.0.1
 
-          rem ===== 从 app.env 读取环境变量 =====
-          if exist "app.env" (
-            for /f "usebackq tokens=* delims=" %%A in ("app.env") do (
+          rem ===== 从 .env 读取环境变量 =====
+          if exist ".env" (
+            for /f "usebackq tokens=* delims=" %%A in (".env") do (
               set "line=%%A"
               if not "!line!"=="" if "!line:~0,1!" NEQ "#" set "!line!"
             )
@@ -123,8 +123,8 @@ jobs:
           $ErrorActionPreference = "Stop"
           Set-Location $PSScriptRoot
 
-          if (Test-Path ".\app.env") {
-            Get-Content ".\app.env" | ForEach-Object {
+          if (Test-Path ".\.env") {
+            Get-Content ".\.env" | ForEach-Object {
               $line = $_.Trim()
               if ($line -and -not $line.StartsWith("#")) {
                 $parts = $line -split "=", 2
@@ -167,7 +167,7 @@ jobs:
           chmod +x "$APP/node"
 
           # Editable env file for maintainers
-          cat > "$APP/app.env" <<'EOF'
+          cat > "$APP/.env" <<'EOF'
           # ===== 应用配置（按需修改）=====
           GOOGLE_API_KEY=sk-
           GOOGLE_API_URL=https://api.ekan8.com/v1
@@ -191,10 +191,10 @@ jobs:
           # export PORT=3000
           # export HOSTNAME=127.0.0.1
 
-          # ===== 从 app.env 读取环境变量 =====
-          if [ -f "./app.env" ]; then
+          # ===== 从 .env 读取环境变量 =====
+          if [ -f "./.env" ]; then
             set -a
-            . "./app.env"
+            . "./.env"
             set +a
           fi
 
@@ -210,7 +210,7 @@ jobs:
           2. 首次若被系统拦截，请右键打开，或在“系统设置 -> 隐私与安全性”中允许运行
           3. 打开浏览器访问 http://127.0.0.1:3000
 
-          如需修改端口或其他配置，请编辑 app.env
+          如需修改端口或其他配置，请编辑 .env
           EOF
 
           tar -czf "$DIST/${{ matrix.archive_name }}" -C "$APP" .
