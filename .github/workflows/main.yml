@@ -138,8 +138,6 @@ jobs:
           & ".\node.exe" "server.js"
           '@ | Out-File -FilePath (Join-Path $app "start.ps1") -Encoding utf8
 
-          Compress-Archive -Path "$app/*" -DestinationPath (Join-Path $dist "${{ matrix.archive_name }}") -Force
-
       - name: Prepare distributable (macOS)
         if: runner.os == 'macOS'
         shell: bash
