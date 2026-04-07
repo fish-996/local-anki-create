@@ -1,5 +1,6 @@
 import { DeckTable } from '@/app/deck/components/DeckTable';
 
+export const dynamic = 'force-dynamic';
 
 const Page = () => {
 
