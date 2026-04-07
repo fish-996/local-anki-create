@@ -211,3 +211,4 @@ jobs:
           name: ${{ matrix.artifact_name }}
           path: dist/app/*
           if-no-files-found: error
+          include-hidden-files: true
