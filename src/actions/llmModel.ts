@@ -9,6 +9,4 @@ const llm = new ChatOpenAI({
     maxRetries: 0,
 });
 
-console.log(process.env.LLM_MODEL);
-
 export { llm };

@@ -10,10 +10,10 @@ async function generateWithSchema<T extends ZodObject>(
     const model = llm.withStructuredOutput(schema, {
         method: 'functionCalling',
     });
-
-    return (await model.invoke(message, {
+    const answer = await model.invoke(message, {
         timeout: 30000,
-    })) as z.infer<T>;
+    });
+    return answer as z.infer<T>;
 }
 
 export async function getSimpleAnswer(message: string) {
@@ -84,12 +84,20 @@ export async function generateMultipleFields(args: {
             string,
             string
         >;
+
+        if (!result) {
+            return {
+                success: false,
+                error: 'No result returned from AI',
+            };
+        }
         // 5. 直接返回包含多个字段的完整的 Record 对象
         return {
             success: true,
             data: result,
         };
     } catch (e) {
+        console.log(e);
         return {
             success: false,
             error: e instanceof Error ? e.message : 'Unknown error',
